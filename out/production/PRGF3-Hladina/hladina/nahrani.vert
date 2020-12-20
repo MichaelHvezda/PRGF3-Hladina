@@ -15,6 +15,7 @@ void main() {
     vec2 position = inPosition * 2 - 1;
 
     vec3 position3d = vec3(position.x,position.y,0);
+
     positionOut = vec4(position3d,1);
     gl_Position = vec4(position3d, 1.0);
 

@@ -22,13 +22,13 @@ public class RendererHladina extends AbstractRenderer {
     private double otoceni =0.01;
 
 
-    private int shaderProgramPredani,shadeProgramVykres, shaderProgramNahrani;
+    private int shaderProgramZTriger,shadeProgramVykres, shaderProgramNahrani;
     private int shaderProgramPosun;
-    private int locShadeView,locShadeProjection;
+    private int locShadeView,locShadeProjection,locShadePoss;
     private Camera camera;
     private Camera cameraLight;
     private Mat4 projection;
-    private boolean per,debug;
+    private boolean per,debug,trig;
     private OGLTexture2D.Viewer viewer;
     private OGLRenderTarget prvniRT, druhyRT;
     private Vec3D lightDir = new Vec3D(1,0,0);
@@ -53,12 +53,15 @@ public class RendererHladina extends AbstractRenderer {
 
         shadeProgramVykres = ShaderUtils.loadProgram("/hladina/vykres");
 
+        shaderProgramZTriger = ShaderUtils.loadProgram("/hladina/Z-Trigger");
+
         locShadeView = glGetUniformLocation(shadeProgramVykres, "view");
         locShadeProjection = glGetUniformLocation(shadeProgramVykres, "projection");
+        locShadePoss = glGetUniformLocation(shaderProgramZTriger, "poss");
 
 
 
-        buffers = GridFactory.generateGrid(100,100);
+        buffers = GridFactory.generateGrid(1000,1000);
 
         //kamera a projektion matice
         camera = new Camera()
@@ -74,7 +77,7 @@ public class RendererHladina extends AbstractRenderer {
         viewer = new OGLTexture2D.Viewer();
         //nastaveni render target na velikost obrazovky aby se kvalita udrzela aj pri vzcetseni okna na celou obrazovku
         //prvniRT = new OGLRenderTarget(800, 400);
-        druhyRT = new OGLRenderTarget(800, 400);
+        druhyRT = new OGLRenderTarget(2560, 1440,2);
 
         renderNahrani();
     }
@@ -86,12 +89,16 @@ public class RendererHladina extends AbstractRenderer {
         perspective();
 
         renderPosun();
+        if(trig){
+            renderZTrigger(new Vec2D(0,0));
+        }
         renderVykres();
 
-
+        trig =false;
         textRenderer.resize(LwjglWindow.WIDTH,LwjglWindow.HEIGHT);
         viewer.view(druhyRT.getColorTexture(0),-1,-1,0.5);
-
+        viewer.view(druhyRT.getColorTexture(1),-1,-0.5,0.5);
+        textRenderer.addStr2D(50,50,camera.getPosition().toString());
     }
 
     //zakresleni objektu do sceny
@@ -111,6 +118,7 @@ public class RendererHladina extends AbstractRenderer {
         glDisable(GL_DEPTH_TEST);
 
         druhyRT.bindColorTexture(shaderProgramPosun, "positionTexture", 0, 0);
+        druhyRT.bindColorTexture(shaderProgramPosun, "moveTexture", 1, 1);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -134,7 +142,24 @@ public class RendererHladina extends AbstractRenderer {
         glUniformMatrix4fv(locShadeView, false, camera.getViewMatrix().floatArray());
         glUniformMatrix4fv(locShadeProjection, false, projection.floatArray());
 
-        buffers.draw(GL_TRIANGLES, shadeProgramVykres);
+        buffers.draw(GL_LINES, shadeProgramVykres);
+    }
+
+    private void renderZTrigger(Vec2D poss) {
+        glUseProgram(shaderProgramZTriger);
+        druhyRT.bind();
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        druhyRT.bindColorTexture(shaderProgramZTriger, "positionTexture", 0, 0);
+        druhyRT.bindColorTexture(shaderProgramZTriger, "moveTexture", 1, 1);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glUniform2f(locShadePoss, (float) poss.getX(),(float) poss.getY());
+
+        buffers.draw(GL_TRIANGLES, shaderProgramZTriger);
     }
 
     //vycisteni sceny
@@ -265,6 +290,10 @@ public class RendererHladina extends AbstractRenderer {
                     case GLFW_KEY_G :
                         debug=!debug;
                         break;
+                    case GLFW_KEY_H :
+                        trig =true;
+                        break;
+
                 }
             }
         }
