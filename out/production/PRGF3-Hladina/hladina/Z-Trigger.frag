@@ -11,7 +11,7 @@ layout (binding=1) uniform sampler2D moveTexture;
 
 uniform vec2 poss;
 
-const float Vzdalenost = 0.75;
+const float Vzdalenost = 1.0;
 const float Sila = 1;
 const float PI = 3.1415;
 

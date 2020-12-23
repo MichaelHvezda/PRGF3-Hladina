@@ -22,7 +22,7 @@ public class RendererHladina extends AbstractRenderer {
     private double otoceni =0.01;
 
 
-    private int shaderProgramZTriger,shadeProgramVykres, shaderProgramNahrani;
+    private int shaderProgramZTriger,shadeProgramVykres, shaderProgramNahrani,shaderProgramPohyb;
     private int shaderProgramPosun;
     private int locShadeView,locShadeProjection,locShadePoss;
     private Camera camera;
@@ -50,6 +50,7 @@ public class RendererHladina extends AbstractRenderer {
         shaderProgramNahrani = ShaderUtils.loadProgram("/hladina/nahrani");
 
         shaderProgramPosun = ShaderUtils.loadProgram("/hladina/posun");
+        shaderProgramPohyb = ShaderUtils.loadProgram("/hladina/pohyb");
 
         shadeProgramVykres = ShaderUtils.loadProgram("/hladina/vykres");
 
@@ -76,7 +77,7 @@ public class RendererHladina extends AbstractRenderer {
 
         viewer = new OGLTexture2D.Viewer();
         //nastaveni render target na velikost obrazovky aby se kvalita udrzela aj pri vzcetseni okna na celou obrazovku
-        //prvniRT = new OGLRenderTarget(800, 400);
+        prvniRT = new OGLRenderTarget(2560, 1440,2);
         druhyRT = new OGLRenderTarget(2560, 1440,2);
 
         renderNahrani();
@@ -89,6 +90,7 @@ public class RendererHladina extends AbstractRenderer {
         perspective();
 
         renderPosun();
+        renderPohyb();
         if(trig){
             renderZTrigger(new Vec2D(0,0));
         }
@@ -110,10 +112,10 @@ public class RendererHladina extends AbstractRenderer {
         buffers.draw(GL_TRIANGLES, shaderProgramNahrani);
     }
 
-    //vypocet ssao
+
     private void renderPosun(){
         glUseProgram(shaderProgramPosun);
-        druhyRT.bind();
+        prvniRT.bind();
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
@@ -125,6 +127,22 @@ public class RendererHladina extends AbstractRenderer {
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         buffers.draw(GL_TRIANGLES, shaderProgramPosun);
+    }
+
+    private void renderPohyb(){
+        glUseProgram(shaderProgramPohyb);
+        druhyRT.bind();
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        prvniRT.bindColorTexture(shaderProgramPohyb, "positionTexture", 0, 0);
+        prvniRT.bindColorTexture(shaderProgramPohyb, "moveTexture", 1, 1);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        buffers.draw(GL_TRIANGLES, shaderProgramPohyb);
     }
 
 

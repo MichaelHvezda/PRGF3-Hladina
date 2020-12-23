@@ -13,8 +13,10 @@ void main() {
 
     vec2 texCoord = inPosition;
     vec4 sss= texture(positionTexture,texCoord);
-    sss = vec4(sss.x*scale,sss.y*scale,sss.z,1);
-    gl_Position = projection * view * vec4(sss.x,sss.y,sss.z, 1);
+    vec2 position = inPosition*2-1;
+    //sss = vec4(sss.x*scale,sss.y*scale,sss.z,1);
+    vec4 pos = vec4(position.x*scale,position.y*scale,sss.z,1);
+    gl_Position = projection * view * vec4(pos.x,pos.y,pos.z, 1);
     //gl_Position = projection * view * vec4((inPosition*2-1)*10,0, 1);
-    //gl_Position = sss;
+    //gl_Position = pos;
 }

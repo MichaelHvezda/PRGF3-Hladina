@@ -14,7 +14,7 @@ const float posunZZZ = 1/1440.0f; //heigh
 
 float getUp(){
     vec2 texCoord2D = vec2(texCoord.x+posunZZZ,texCoord.y);
-    float positionZ = texture(positionTexture, texCoord2D+vec2(posunZZZ,0)).z;
+    float positionZ = textureOffset(positionTexture, texCoord,ivec2(1,0)).z;
 
     float diffZ = positionZ;
 
@@ -25,7 +25,7 @@ float getUp(){
 
 float getDown(){
     vec2 texCoord2D = vec2(texCoord.x-posunZZZ,texCoord.y);
-    float positionZ = texture(positionTexture, texCoord2D+vec2(posunZZZ,0)).z;
+    float positionZ = textureOffset(positionTexture, texCoord,ivec2(-1,0)).z;
 
     float diffZ = positionZ;
 
@@ -35,7 +35,7 @@ float getDown(){
 
 float getLeft(){
     vec2 texCoord2D = vec2(texCoord.x,texCoord.y-posunZZZ);
-    float positionZ = texture(positionTexture, texCoord2D-vec2(0,posunZZZ)).z;
+    float positionZ = textureOffset(positionTexture, texCoord,ivec2(0,1)).z;
 
     float diffZ = positionZ;
 
@@ -45,7 +45,7 @@ float getLeft(){
 
 float getRight(){
     vec2 texCoord2D = vec2(texCoord.x,texCoord.y+posunZZZ);
-    float positionZ = texture(positionTexture, texCoord2D+vec2(0,posunZZZ)).z;
+    float positionZ = textureOffset(positionTexture, texCoord,ivec2(0,-1)).z;
 
     float diffZ = positionZ;
 
@@ -60,38 +60,86 @@ vec4 getMove(vec3 pos, float move){
     float down = 0;
     float left = 0;
     float right = 0;
+    if(texCoord.x>0.01){
+        up = getUp();
+        sousedi++;
+    }
+//
+    if(texCoord.x<0.99){
+         down = getDown();
+        sousedi++;
+    }
+//
+    if(texCoord.y>0.01){
+         left = getLeft();
+        sousedi++;
+    }
+//
+    if(texCoord.y<0.99){
+         right = getRight();
+        sousedi++;
+    }
+
+
+    //up = getUp();
+    //down = getDown();
+    //left = getLeft();
+    //right = getRight();
+
+    mv = move*utlum + ((down+up+right+left)/4-pos.z);
+
+    return vec4(mv,mv,mv,1);
+}
+
+vec4 getMoveDerivation(vec3 pos, float move){
+    float sousedi = 0;
+
+    float mv= 0;
+    float count = 0;
+    float up = 0;
+    float down = 0;
+    float left = 0;
+    float right = 0;
     if(texCoord.x!=0){
-        float up = getUp();
+       // float up = getUp();
+        count = count + getUp();
         sousedi++;
     }
 
     if(texCoord.x!=1){
-        float down = getDown();
+       // float down = getDown();
+        count = count + getDown();
         sousedi++;
     }
 
     if(texCoord.y!=0){
-        float left = getLeft();
+       // float left = getLeft();
+        count = count + getLeft();
         sousedi++;
     }
 
     if(texCoord.y!=1){
-        float right = getRight();
+        //float right = getRight();
+        count = count + getRight();
         sousedi++;
     }
 
-    mv = move*utlum + ((up+down+left+right)/sousedi-pos.z);
+    //mv = move*utlum + ((up+down+left+right)/sousedi-pos.z);
+    //mv = move*utlum + (count/sousedi-pos.z);
+    mv = move*utlum + (0-pos.z);
 
     return vec4(mv,mv,mv,1);
 }
+
 
 void main() {
     vec3 position3d = texture(positionTexture, texCoord).xyz;
     vec3 move3d = texture(moveTexture, texCoord).xyz;
 
-    vec4 newMove = getMove(position3d,move3d.z);
+    //vec4 newMove = getMove(position3d,move3d.z);
+    float mov =move3d.z*utlum - position3d.z;
+    vec4 newMove = vec4(mov,mov,mov,1.0);
 
-    position3d = vec3(position3d.x,position3d.y,position3d.z+newMove.z);
     vec4 positionOut = vec4(position3d,1);
     outColor0 = positionOut;
     outColor1 = newMove;

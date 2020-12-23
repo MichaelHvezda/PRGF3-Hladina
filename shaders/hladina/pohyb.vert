@@ -2,9 +2,7 @@
 in vec2 inPosition; // input from the vertex buffer
 in vec2 inTexCoord; // input from the vertex buffer
 
-out vec4 positionOut; // output from this shader to the next pipleline stage
 out vec2 texCoord;
-
 
 void main() {
 

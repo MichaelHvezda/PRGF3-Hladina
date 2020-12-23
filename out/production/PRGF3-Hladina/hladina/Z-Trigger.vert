@@ -6,10 +6,6 @@ out vec4 positionOut; // output from this shader to the next pipleline stage
 out vec2 texCoord;
 
 
-uniform mat4 view;
-uniform mat4 projection;
-
-
 void main() {
 
     texCoord = inPosition;//* 2 - 1;
