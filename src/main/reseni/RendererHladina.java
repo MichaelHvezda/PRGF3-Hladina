@@ -49,8 +49,8 @@ public class RendererHladina extends AbstractRenderer {
         //definice lokaci shaderu
         shaderProgramNahrani = ShaderUtils.loadProgram("/hladina/nahrani");
 
-        shaderProgramPosun = ShaderUtils.loadProgram("/hladina/posun");
-        shaderProgramPohyb = ShaderUtils.loadProgram("/hladina/pohyb");
+        shaderProgramPosun = ShaderUtils.loadProgram("/hladina/posun1");
+        shaderProgramPohyb = ShaderUtils.loadProgram("/hladina/pohyb1");
 
         shadeProgramVykres = ShaderUtils.loadProgram("/hladina/vykres");
 
@@ -62,7 +62,7 @@ public class RendererHladina extends AbstractRenderer {
 
 
 
-        buffers = GridFactory.generateGrid(1000,1000);
+        buffers = GridFactory.generateGrid(500,500);
 
         //kamera a projektion matice
         camera = new Camera()
@@ -100,6 +100,8 @@ public class RendererHladina extends AbstractRenderer {
         textRenderer.resize(LwjglWindow.WIDTH,LwjglWindow.HEIGHT);
         viewer.view(druhyRT.getColorTexture(0),-1,-1,0.5);
         viewer.view(druhyRT.getColorTexture(1),-1,-0.5,0.5);
+        viewer.view(prvniRT.getColorTexture(0),-0.5,-1,0.5);
+        viewer.view(prvniRT.getColorTexture(1),-0.5,-0.5,0.5);
         textRenderer.addStr2D(50,50,camera.getPosition().toString());
     }
 

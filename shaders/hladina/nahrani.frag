@@ -12,6 +12,6 @@ uniform mat4 view;
 uniform float temp;
 
 void main() {
-        outColor0 = positionOut;
+        outColor0 = vec4(0,0,0,1);
         outColor1 = vec4(0,0,0,1);
 }
