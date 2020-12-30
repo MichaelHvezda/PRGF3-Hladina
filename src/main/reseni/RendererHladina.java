@@ -4,10 +4,7 @@ import lwjglutils.*;
 import main.AbstractRenderer;
 import main.GridFactory;
 import main.LwjglWindow;
-import org.lwjgl.glfw.GLFWCursorPosCallback;
-import org.lwjgl.glfw.GLFWKeyCallback;
-import org.lwjgl.glfw.GLFWMouseButtonCallback;
-import org.lwjgl.glfw.GLFWWindowSizeCallback;
+import org.lwjgl.glfw.*;
 import transforms.*;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -18,25 +15,36 @@ import static org.lwjgl.opengl.GL30.glBindFramebuffer;
 
 public class RendererHladina extends AbstractRenderer {
 
-    private OGLBuffers buffers;
+    private OGLBuffers buffers,buffersSun;
     private double otoceni =0.01;
 
-
+    private int locViewSun, locProjectionSun, shaderProgramSun, locLightPosSun;
     private int shaderProgramZTriger,shadeProgramVykres, shaderProgramNahrani,shaderProgramPohyb;
     private int shaderProgramPosun;
-    private int locShadeView,locShadeProjection,locShadePoss;
+    private int locShadeView,locShadeProjection, locZTrigerPoss,locZTrigerStrange,locPosunPosunZZZ,locPohybHrana;
+    private int locShadeLightType,locShadeLightDir,locShadeLightSpotCutOff;
+    private int locShadeLightPos,locShadeCameraPos,locShadeSvetloADS;
     private Camera camera;
     private Camera cameraLight;
     private Mat4 projection;
-    private boolean per,debug,trig;
+    private boolean per,debug,trig,trigMouse,trigRess;
     private OGLTexture2D.Viewer viewer;
     private OGLRenderTarget prvniRT, druhyRT;
     private Vec3D lightDir = new Vec3D(1,0,0);
+    private Vec2D cursorPos = new Vec2D(0);
     private float lightSpotCutOff = 0.95f;
+    private int hustota = 200;
     private int switchInt =0;
     private float lightType = 0;
     private int svetloAmbient=0,svetloDiffuse=0,svetloSpecular=0;
 
+    private int hranaUp=0,hranaLeft=0,hranaDown=0,hranaRight=0;
+
+    //uni hustota //
+    //odemikani hran //
+    //osvětleni //
+    //popis ovlani  //
+    //komenty
     @Override
     public void init() {
         OGLUtils.printOGLparameters();
@@ -56,21 +64,38 @@ public class RendererHladina extends AbstractRenderer {
 
         shaderProgramZTriger = ShaderUtils.loadProgram("/hladina/Z-Trigger");
 
+        shaderProgramSun = ShaderUtils.loadProgram("/hladina/objSun");
+
         locShadeView = glGetUniformLocation(shadeProgramVykres, "view");
         locShadeProjection = glGetUniformLocation(shadeProgramVykres, "projection");
-        locShadePoss = glGetUniformLocation(shaderProgramZTriger, "poss");
+        locShadeLightPos = glGetUniformLocation(shadeProgramVykres, "lightPosition");
+        locShadeCameraPos = glGetUniformLocation(shadeProgramVykres, "cameraPosition");
+        locShadeLightType = glGetUniformLocation(shadeProgramVykres, "lightType");
+        locShadeLightSpotCutOff = glGetUniformLocation(shadeProgramVykres, "lightSpotCutOff");
+        locShadeLightDir = glGetUniformLocation(shadeProgramVykres, "lightDir");
+        locShadeSvetloADS = glGetUniformLocation(shadeProgramVykres, "svetloADS");
 
+        locZTrigerPoss = glGetUniformLocation(shaderProgramZTriger, "poss");
+        locZTrigerStrange = glGetUniformLocation(shaderProgramZTriger, "strange");
 
+        locPosunPosunZZZ = glGetUniformLocation(shaderProgramPosun, "posunZZZ");
 
-        buffers = GridFactory.generateGrid(500,500);
+        locPohybHrana = glGetUniformLocation(shaderProgramPohyb, "hrana");
+
+        locViewSun = glGetUniformLocation(shaderProgramSun, "view");
+        locProjectionSun = glGetUniformLocation(shaderProgramSun, "projection");
+        locLightPosSun = glGetUniformLocation(shaderProgramSun, "lightPos");
+
+        buffers = GridFactory.generateGrid(100,100);
+        buffersSun = GridFactory.generateGrid(100,100);
 
         //kamera a projektion matice
         camera = new Camera()
-                .withPosition(new Vec3D(2, 2, 3)) // pozice pozorovatele
+                .withPosition(new Vec3D(8, 8, 5)) // pozice pozorovatele
                 .withAzimuth(5 / 4f * Math.PI) // otočení do strany o (180+45) stupňů v radiánech
                 .withZenith(-1 / 5f * Math.PI); // otočení (90/5) stupňů dolů
 
-        cameraLight = new Camera().withPosition(new Vec3D(-2, -2, 2));
+        cameraLight = new Camera().withPosition(new Vec3D(-8, -8, 5));
 
         projection = new Mat4PerspRH(Math.PI / 3, LwjglWindow.HEIGHT / (float)LwjglWindow.WIDTH, 1, 20);
 
@@ -80,6 +105,7 @@ public class RendererHladina extends AbstractRenderer {
         prvniRT = new OGLRenderTarget(2560, 1440,2);
         druhyRT = new OGLRenderTarget(2560, 1440,2);
 
+        //nahrani hladiny
         renderNahrani();
     }
 
@@ -88,24 +114,51 @@ public class RendererHladina extends AbstractRenderer {
         glEnable(GL_DEPTH_TEST);
 
         perspective();
-
+        //vypocet posunu a posun
         renderPosun();
         renderPohyb();
-        if(trig){
-            renderZTrigger(new Vec2D(0,0));
-        }
-        renderVykres();
 
+        //triger hladiny
+        if(trig){
+            renderZTrigger(new Vec2D(0,0),-1,0.5f);
+        }
+        if(trigMouse){
+            renderZTrigger(cursorPos,-0.25f,0.25f);
+        }
+        //reset hladiny
+        if(trigRess){
+            renderNahrani();
+        }
+        //vykresleni hladiny
+        renderVykres();
+        //vykresleni svetla
+        renderSunPos();
         trig =false;
+        trigMouse =false;
+        trigRess =false;
+
         textRenderer.resize(LwjglWindow.WIDTH,LwjglWindow.HEIGHT);
-        viewer.view(druhyRT.getColorTexture(0),-1,-1,0.5);
-        viewer.view(druhyRT.getColorTexture(1),-1,-0.5,0.5);
-        viewer.view(prvniRT.getColorTexture(0),-0.5,-1,0.5);
-        viewer.view(prvniRT.getColorTexture(1),-0.5,-0.5,0.5);
-        textRenderer.addStr2D(50,50,camera.getPosition().toString());
+
+        //debug a vypis textu
+        if(!debug){
+            viewer.view(druhyRT.getColorTexture(0),-1,-1,0.5);
+            viewer.view(druhyRT.getColorTexture(1),-1,-0.5,0.5);
+            viewer.view(prvniRT.getColorTexture(0),-0.5,-1,0.5);
+            viewer.view(prvniRT.getColorTexture(1),-0.5,-0.5,0.5);
+
+            textRenderer.addStr2D( (int)(LwjglWindow.WIDTH*(0f/4f)), (int)(LwjglWindow.HEIGHT*(3f/4f)), "Druhy posun");
+            textRenderer.addStr2D( (int)(LwjglWindow.WIDTH*(1f/4f)), (int)(LwjglWindow.HEIGHT*(3f/4f)), "Prvni posun");
+            textRenderer.addStr2D( (int)(LwjglWindow.WIDTH*(0f/4f)), (int)(LwjglWindow.HEIGHT*(4f/4f)), "Druhy pozice");
+            textRenderer.addStr2D( (int)(LwjglWindow.WIDTH*(1f/4f)), (int)(LwjglWindow.HEIGHT*(4f/4f)), "Prvni pozice");
+        }
+        textRenderer.addStr2D(LwjglWindow.WIDTH - 500, LwjglWindow.HEIGHT - 3, camera.getPosition().toString() + " azimut: "+ camera.getAzimuth() + " zenit: "+ camera.getZenith());
+        textRenderer.addStr2D(LwjglWindow.WIDTH - 500, LwjglWindow.HEIGHT - 15, "hustota " + hustota);
+        textRenderer.addStr2D(10, 25, "Camera [WASD QE], Perspektive [P], Mod gridu [M], Debug [G], Ambient [Y], Diffuse [X], Spekular [C], Odemceni hran [8 6 2 4], Zamčení hran [0] - Odemceni [5]");
+        textRenderer.addStr2D(10, 40, "Trignutí v bode (0,0) [H], Zmena hustoty [Kolecko mysi + -], Trignuti hladiny [RMB], Vyhlazeni hladiny [SPACE]");
+
     }
 
-    //zakresleni objektu do sceny
+    //nahrani hladiny
     private void renderNahrani(){
         glUseProgram(shaderProgramNahrani);
 
@@ -114,42 +167,33 @@ public class RendererHladina extends AbstractRenderer {
         buffers.draw(GL_TRIANGLES, shaderProgramNahrani);
     }
 
-
+    //vypocet posunu
     private void renderPosun(){
         glUseProgram(shaderProgramPosun);
         prvniRT.bind();
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
         druhyRT.bindColorTexture(shaderProgramPosun, "positionTexture", 0, 0);
         druhyRT.bindColorTexture(shaderProgramPosun, "moveTexture", 1, 1);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+        glUniform1f(locPosunPosunZZZ,1/(float)hustota);
         buffers.draw(GL_TRIANGLES, shaderProgramPosun);
     }
 
+    //posun hladiny
     private void renderPohyb(){
         glUseProgram(shaderProgramPohyb);
         druhyRT.bind();
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
         prvniRT.bindColorTexture(shaderProgramPohyb, "positionTexture", 0, 0);
         prvniRT.bindColorTexture(shaderProgramPohyb, "moveTexture", 1, 1);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+        glUniform4f(locPohybHrana,hranaUp,hranaRight,hranaDown,hranaLeft);
         buffers.draw(GL_TRIANGLES, shaderProgramPohyb);
     }
 
-
-
-
+    //vykresleni hladiny
     private void renderVykres() {
         glUseProgram(shadeProgramVykres);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -161,25 +205,49 @@ public class RendererHladina extends AbstractRenderer {
 
         glUniformMatrix4fv(locShadeView, false, camera.getViewMatrix().floatArray());
         glUniformMatrix4fv(locShadeProjection, false, projection.floatArray());
+        glUniform3fv(locShadeLightDir, ToFloatArray.convert(lightDir));
+        glUniform3fv(locShadeCameraPos, ToFloatArray.convert(camera.getPosition()));
+        glUniform3fv(locShadeLightPos, ToFloatArray.convert(cameraLight.getPosition()));
+        Point3D svetlo = new Point3D(svetloAmbient,svetloDiffuse,svetloSpecular);
+        glUniform3fv(locShadeSvetloADS,ToFloatArray.convert(svetlo));
 
-        buffers.draw(GL_LINES, shadeProgramVykres);
+        switch (switchInt){
+            case 0:
+                buffers.draw(GL_TRIANGLES, shadeProgramVykres);
+                break;
+            case 1:
+                buffers.draw(GL_LINES, shadeProgramVykres);
+                break;
+            case 2:
+                buffers.draw(GL_POINTS, shadeProgramVykres);
+                break;
+        }
     }
 
-    private void renderZTrigger(Vec2D poss) {
+    //triger hladiny
+    private void renderZTrigger(Vec2D poss, float sila, float vzdalenost) {
         glUseProgram(shaderProgramZTriger);
         druhyRT.bind();
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
         druhyRT.bindColorTexture(shaderProgramZTriger, "positionTexture", 0, 0);
         druhyRT.bindColorTexture(shaderProgramZTriger, "moveTexture", 1, 1);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glUniform2f(locShadePoss, (float) poss.getX(),(float) poss.getY());
+
+        glUniform2f(locZTrigerPoss, (float) poss.getX(),(float) poss.getY());
+        glUniform2f(locZTrigerStrange, (float) vzdalenost,(float) sila);
 
         buffers.draw(GL_TRIANGLES, shaderProgramZTriger);
+    }
+
+    //vykresleni pozice svetla
+    private void renderSunPos(){
+        glUseProgram(shaderProgramSun);
+
+        glUniform3fv(locLightPosSun, ToFloatArray.convert(cameraLight.getPosition()));
+        glUniformMatrix4fv(locViewSun, false, camera.getViewMatrix().floatArray());
+        glUniformMatrix4fv(locProjectionSun, false, projection.floatArray());
+
+        buffersSun.draw(GL_TRIANGLE_STRIP, shaderProgramSun);
     }
 
     //vycisteni sceny
@@ -191,6 +259,7 @@ public class RendererHladina extends AbstractRenderer {
 
         glViewport(0, 0, LwjglWindow.WIDTH, LwjglWindow.HEIGHT);
     }
+
     public void perspective(){
         if(!per){
             projection = new Mat4PerspRH(Math.PI / 3, LwjglWindow.HEIGHT / (float)LwjglWindow.WIDTH, 1, 20);
@@ -222,8 +291,15 @@ public class RendererHladina extends AbstractRenderer {
         return keyCallback;
     }
 
+    @Override
+    public GLFWScrollCallback getScrollCallback(){
+      return scrollCallback;
+    };
+
     private double oldMx, oldMy;
+    private double oldMxRight, oldMyRight;
     private boolean mousePressed;
+    private boolean mousePressedRight;
 
     private final GLFWWindowSizeCallback windowResCallback = new GLFWWindowSizeCallback() {
         @Override
@@ -243,6 +319,12 @@ public class RendererHladina extends AbstractRenderer {
                 oldMx = x;
                 oldMy = y;
             }
+            if (mousePressedRight) {
+                cursorPos = new Vec2D((x/LwjglWindow.WIDTH)*2-1,(y/LwjglWindow.HEIGHT)*2-1);
+                oldMxRight = x;
+                oldMyRight = y;
+                trigMouse = true;
+            }
         }
     };
 
@@ -256,6 +338,27 @@ public class RendererHladina extends AbstractRenderer {
                 oldMx = xPos[0];
                 oldMy = yPos[0];
                 mousePressed = action == GLFW_PRESS;
+            }
+            if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                mousePressedRight = action == GLFW_PRESS;
+            }
+
+        }
+    };
+    private final GLFWScrollCallback scrollCallback = new GLFWScrollCallback() {
+        @Override
+        public void invoke(long window, double xoffset, double yoffset) {
+            if(yoffset<0){
+                hustota=(2000+hustota-10)%2000;
+                if(hustota==0){
+                    hustota=2000;
+                }
+            }
+            if(yoffset>0){
+                hustota=(2000+hustota+10)%2000;
+                if(hustota==0){
+                    hustota=10;
+                }
             }
         }
     };
@@ -287,16 +390,7 @@ public class RendererHladina extends AbstractRenderer {
                         per=!per;
                         break;
                     case GLFW_KEY_M :
-                        switchInt = (switchInt+1)%6;
-                        break;
-                    case GLFW_KEY_L :
-                        lightType = (lightType+1)%2;
-                        break;
-                    case GLFW_KEY_B :
-                        lightSpotCutOff =((lightSpotCutOff+ 0.002f)+1)%1;
-                        break;
-                    case GLFW_KEY_V :
-                        lightSpotCutOff =((lightSpotCutOff- 0.002f)+1)%1;
+                        switchInt = (switchInt+1)%3;
                         break;
                     case GLFW_KEY_C :
                         svetloSpecular=(svetloSpecular+1)%2;
@@ -312,6 +406,33 @@ public class RendererHladina extends AbstractRenderer {
                         break;
                     case GLFW_KEY_H :
                         trig =true;
+                        break;
+                    case GLFW_KEY_SPACE:
+                        trigRess =true;
+                        break;
+                    case GLFW_KEY_KP_8:
+                        hranaUp=(hranaUp+1)%2;
+                        break;
+                    case GLFW_KEY_KP_6:
+                        hranaRight=(hranaRight+1)%2;
+                        break;
+                    case GLFW_KEY_KP_2:
+                        hranaDown=(hranaDown+1)%2;
+                        break;
+                    case GLFW_KEY_KP_4:
+                        hranaLeft=(hranaLeft+1)%2;
+                        break;
+                    case GLFW_KEY_KP_5:
+                        hranaLeft=1;
+                        hranaDown=1;
+                        hranaRight=1;
+                        hranaUp=1;
+                        break;
+                    case GLFW_KEY_KP_0:
+                        hranaLeft=0;
+                        hranaDown=0;
+                        hranaRight=0;
+                        hranaUp=0;
                         break;
 
                 }

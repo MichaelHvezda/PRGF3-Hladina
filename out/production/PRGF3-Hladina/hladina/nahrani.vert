@@ -11,7 +11,6 @@ uniform mat4 projection;
 
 
 void main() {
-    //texCoord = inPosition;
     vec2 position = inPosition * 2 - 1;
 
     vec3 position3d = vec3(position.x,position.y,0);

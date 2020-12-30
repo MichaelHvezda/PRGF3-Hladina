@@ -8,8 +8,8 @@ out vec2 texCoord;
 uniform vec2 poss;
 out vec3 move3d;
 out vec3 positionOut;
-const float Vzdalenost = 0.75;
-const float Sila = 1;
+uniform vec2 strange;
+
 const float PI = 3.1415;
 
 float getMove(vec3 pos){
@@ -24,12 +24,12 @@ float getMove(vec3 pos){
     ((x0-x)*(x0-x))+((y0-y)*(y0-y))
     );
 
-    if (vysledek <= Vzdalenost){
+    if (vysledek <= strange.x){
 
-        vysledek = vysledek/Vzdalenost;
+        vysledek = vysledek/strange.x;
         vysledek = PI * vysledek;
         vysledek = (cos(vysledek)+1)/2;
-        mv = mv+vysledek*Sila;
+        mv = mv+vysledek*strange.y;
         test =mv+1;
     }else {
         mv = mv+0.0;
